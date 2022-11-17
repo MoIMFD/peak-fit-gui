@@ -1,15 +1,19 @@
+import sys
+
+# check for python >= 3.11 
+if sys.version_info[1] >= 11:
+    import tomllib
+else:
+    import tomli as tomllib
+
 from pathlib import Path
-from collections import defaultdict 
-import tomllib
-import os
 
 import matplotlib.pyplot as plt
-from matplotlib.patches import Polygon
-from matplotlib.widgets import Button, Slider, RadioButtons
-import pandas as pd
-from scipy.signal import find_peaks
 import numpy as np
-
+import pandas as pd
+from matplotlib.patches import Polygon
+from matplotlib.widgets import Button, RadioButtons, Slider
+from scipy.signal import find_peaks
 
 ### GLOBALS ###
 SCRIPT_VERSION:str = "1.0"  # current version of the script, update this if you make significant modifications
@@ -213,7 +217,6 @@ class PeakFitGUI:
 
         self.ax.legend()
         self.ax.set_ylim(self.ylim)
-
 
     @property
     def param_dict(self) -> dict:
@@ -438,7 +441,7 @@ class PeakFitGUI:
         plt.draw()
 
     @property
-    def neg_peaks(self) -> tuple[np.ndarray | dict]:
+    def neg_peaks(self):# -> tuple[np.ndarray | dict]:
         """Returns peaks found with current parameter settings for negative signal using self.paramter_dict_neg
 
         Returns
@@ -449,7 +452,7 @@ class PeakFitGUI:
         return find_peaks(-self.ydata, **self.param_dict_neg)
 
     @property
-    def pos_peaks(self) -> tuple[np.ndarray | dict]:
+    def pos_peaks(self):# -> tuple[np.ndarray | dict]:
         """Returns peaks found with current parameter settings for positive signal using self.paramter_dict
 
         Returns
@@ -583,7 +586,7 @@ def main(file, config, console_width=80):
     print(df.head())
     # start peak fit gui
     print("\n" + "  Starting peak Fit  ".center(console_width, "-"))
-    PeakFitGUI(
+    peak_fit_gui = PeakFitGUI(
         df=df,
         plot_title=f"file: {str(file)} ( rows: {df.shape[0]} x cols: {df.shape[1]} )",
         **config.get("data_defaults"),
