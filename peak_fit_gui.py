@@ -95,7 +95,9 @@ class PeakFitGUI:
         ## create radio buttons for index selection
         self.fig.subplots_adjust(left=0.3)
         ## BEGIN idx_radio
-        self.idx_radio_axes = self.fig.add_axes([0.02, 0.45 - 0.03*self.ncols, 0.15, 0.03*self.ncols])
+        self.idx_radio_axes = self.fig.add_axes(
+            [0.02, 0.45 - 0.03*self.ncols, 0.15, 0.03*self.ncols], frameon=True, aspect="equal"
+            )
         self.idx_radio_axes.set_title("x data")
         self.idx_radio = RadioButtons(
             self.idx_radio_axes, 
@@ -105,7 +107,9 @@ class PeakFitGUI:
         self.idx_radio.on_clicked(self.radio_idx_function)
         ## END idx_radio
         ## BEGIN idy_radio
-        self.idy_radio_axes = self.fig.add_axes([0.02, 0.6, 0.15, 0.03*self.ncols])
+        self.idy_radio_axes = self.fig.add_axes(
+            [0.02, 0.6, 0.15, 0.03*self.ncols], frameon=True, aspect="equal"
+            )
         self.idy_radio_axes.set_title("y data")
         self.idy_radio = RadioButtons(
             self.idy_radio_axes, 
