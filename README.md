@@ -45,6 +45,7 @@ usage: python peak_fit_gui.py [-h] [-f FILE] [-c CONFIG]
                                 peak height
                                 peak prominence
                                 peak distance
+                                peak width
         
 
 options:
