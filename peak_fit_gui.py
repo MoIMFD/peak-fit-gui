@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib.patches import Polygon
-from matplotlib.widgets import Button, RadioButtons, Slider
+from matplotlib.widgets import Button, RadioButtons, Slider, RangeSlider
 from scipy.signal import find_peaks
 
 ### GLOBALS ###
@@ -48,6 +48,12 @@ def set_polygon_y(polygon: Polygon, y_lower:float, y_upper:float):
     _array[:, 1] = [y_lower, y_upper, y_upper, y_lower, y_lower]
     polygon.set_xy(_array)
 
+
+def estimate_prominence(ydata:np.ndarray):
+    mean = ydata.mean()
+    return np.abs(ydata).max() - mean
+
+
 class PeakFitGUI:
     def __init__(
         self,
@@ -74,8 +80,10 @@ class PeakFitGUI:
         # set initial indexes for x and y data
         self.idx = x_initial_index
         self.idy = y_initial_index
+
         # initialize matplotlib figure and axes
         self.fig, self.ax = plt.subplots(**figure_settings)
+        self.fig.subplots_adjust(left=0.3, bottom=0.25)  # make space for widgets
         self.fig.suptitle("Peak Fit GUI", fontsize=16)
         self.ax.set_title(plot_title)
         self.grid_visible = False
@@ -86,52 +94,54 @@ class PeakFitGUI:
             ) # when 'dict.get' method is called with a key not present in the dict it returns None
         self.ax.set_xlabel(
             df.columns[self.idx],
-            color=radio_colors["x_color"] if radio_colors.get("x_color") is not None else "black"
+            color=c if (c := radio_colors.get("x_color")) else "black",
+            fontsize=s if (s := radio_colors.get("x_font_size")) else 12
             )
         self.ax.set_ylabel(
             df.columns[self.idy],
-            color=radio_colors["y_color"] if radio_colors.get("y_color") is not None else "black"
+            color=c if (c := radio_colors.get("y_color")) else "black"
             )
+        # dictionary to store widgets 
+        self.widgets = dict()
         ## create radio buttons for index selection
-        self.fig.subplots_adjust(left=0.3)
         ## BEGIN idx_radio
-        self.idx_radio_axes = self.fig.add_axes(
-            [0.02, 0.45 - 0.03*self.ncols, 0.15, 0.03*self.ncols], frameon=True, aspect="equal"
+        idx_radio_axes = self.fig.add_axes(
+            [0.02, 0.45 - 0.03*self.ncols, 0.15, 0.03*self.ncols], aspect="equal"
             )
-        self.idx_radio_axes.set_title("x data")
-        self.idx_radio = RadioButtons(
-            self.idx_radio_axes, 
+        idx_radio_axes.set_title("x data")
+        idx_radio = RadioButtons(
+        idx_radio_axes, 
             df.columns, active=self.idx, 
-            activecolor=radio_colors["x_color"] if radio_colors.get("x_color") is not None else "black"
+            activecolor=c if (c := radio_colors.get("x_color")) else "black"
             )
-        self.idx_radio.on_clicked(self.radio_idx_function)
+        idx_radio.on_clicked(self.radio_idx_function)
+        self.widgets.setdefault("radio_btn", {}).update({"idx": idx_radio})
         ## END idx_radio
         ## BEGIN idy_radio
-        self.idy_radio_axes = self.fig.add_axes(
+        idy_radio_axes = self.fig.add_axes(
             [0.02, 0.6, 0.15, 0.03*self.ncols], frameon=True, aspect="equal"
             )
-        self.idy_radio_axes.set_title("y data")
-        self.idy_radio = RadioButtons(
-            self.idy_radio_axes, 
+        idy_radio_axes.set_title("y data")
+        idy_radio = RadioButtons(
+            idy_radio_axes, 
             df.columns, active=self.idy, 
-            activecolor = radio_colors["y_color"] if radio_colors.get("y_color") is not None else "black"
+            activecolor =c if (c := radio_colors.get("y_color")) else "black"
             )
-        self.idy_radio.on_clicked(self.radio_idy_function)
+        idy_radio.on_clicked(self.radio_idy_function)
+        self.widgets.setdefault("radio_btn", {}).update({"idy": idy_radio})
         ## END idy_radio
         ## create slider for parameter variation
-        self.fig.subplots_adjust(bottom=0.25)
         ## BEGIN height_slider
-        self.height_min, self.height_max = peak_fit_defaults.get("height") if peak_fit_defaults.get("height") is not None else (self.ydata.min(), self.ydata.max())
+        self.height_min, self.height_max = val if (val := peak_fit_defaults.get("height")) else (self.ydata.min(), self.ydata.max())
         # minimum slider
-        self.height_min_slider_axes = self.fig.add_axes([0.25, 0.15, 0.65, 0.03])
-        self.height_min_slider = Slider(
-            self.height_min_slider_axes, 
-            "min height", 
-            valmin =  self.ydata.min(),
-            valmax = self.height_max, 
-            valinit = self.height_min
-             )
-        self.height_min_slider.on_changed(self.height_min_function)
+        self.min_height_key = self.create_slider(
+            ax_dim=[0.25, 0.15, 0.65, 0.03],
+            label="min height",
+            vmin=self.ydata.min(),
+            vmax=self.height_max,
+            vinit=self.height_min,
+            func=self.height_min_function
+        )
         self.height_min_line = self.ax.axhline(self.height_min, **hline_settings)
         self.height_min_box = self.ax.axhspan(
             ymin = self.ylim[0],
@@ -139,15 +149,14 @@ class PeakFitGUI:
             **axhspan_settings
         )
         # maximum slider
-        self.height_max_slider_axes = self.fig.add_axes([0.25, 0.12, 0.65, 0.03])
-        self.height_max_slider = Slider(
-            self.height_max_slider_axes, 
-            "max height", 
-            valmin = self.height_min, 
-            valmax = self.ydata.max(), 
-            valinit = self.height_max
-            )
-        self.height_max_slider.on_changed(self.height_max_function)
+        self.max_height_key = self.create_slider(
+            ax_dim=[0.25, 0.12, 0.65, 0.03],
+            label="max height",
+            vmin=self.height_min,
+            vmax=self.ydata.max(),
+            vinit=self.height_max,
+            func=self.height_max_function
+        )
         self.height_max_line = self.ax.axhline(self.height_max, **hline_settings)
         self.height_max_box = self.ax.axhspan(
             ymin = self.height_max,
@@ -156,40 +165,37 @@ class PeakFitGUI:
         )
         ## END height_slider
         ## BEGIN distance_slider
-        self.peak_distance = peak_fit_defaults["distance"] if peak_fit_defaults.get("distance") is not None else 1
-        self.peak_distance_slider_axes = self.fig.add_axes([0.25, 0.09, 0.65, 0.03])
-        self.peak_distance_slider = Slider(
-            self.peak_distance_slider_axes, 
-            "distance", 
-            valmin = slider_limit_defaults["distance_lower"] if slider_limit_defaults.get("distance_lower") is not None else 1,
-            valmax = slider_limit_defaults["distance_upper"] if slider_limit_defaults.get("distance_upper") is not None else self.xdata.size,
-            valinit = self.peak_distance, 
-            valstep = 1
-            )
-        self.peak_distance_slider.on_changed(self.peak_distance_function)
+        self.peak_distance = val if (val := peak_fit_defaults.get("distance")) else 1
+        self.peak_dist_key = self.create_slider(
+            ax_dim=[0.25, 0.09, 0.65, 0.03],
+            label="distance",
+            vmin=val if (val := slider_limit_defaults.get("distance_lower")) else 1,
+            vmax=val if (val := slider_limit_defaults.get("distance_upper")) else self.xdata.size,
+            vinit=self.peak_distance,
+            func=self.peak_distance_function
+        )
         ## END distance_slider
         ## BEGIN prominence_slider
-        self.prominence_min, self.prominence_max = peak_fit_defaults["prominence"] if peak_fit_defaults.get("prominence") is not None else (0, 1)
+        self.prominence_min, self.prominence_max = val if (val := peak_fit_defaults.get("prominence")) else (0, 1)
         # minimum slider
-        self.prominence_min_slider_axes = self.fig.add_axes([0.25, 0.06, 0.65, 0.03])
-        self.prominence_min_slider = Slider(
-            self.prominence_min_slider_axes,
-            "prom. min",
-            valmin = slider_limit_defaults["prominence_lower"] if slider_limit_defaults.get("prominence_lower") is not None else 0,
-            valmax = self.prominence_max,
-            valinit = self.prominence_min
-            )
-        self.prominence_min_slider.on_changed(self.prominence_min_function)
+        self.min_prom_key = self.create_slider(
+            ax_dim=[0.25, 0.06, 0.65, 0.03],
+            label="prom. min",
+            vmin=val if (val := slider_limit_defaults.get("prominence_min")) else 0,
+            vmax=self.prominence_max,
+            vinit=self.prominence_min,
+            func=self.prominence_min_function
+        )
         # maximum slider
-        self.prominence_max_slider_axes = self.fig.add_axes([0.25, 0.03, 0.65, 0.03])
-        self.prominence_max_slider = Slider(
-            self.prominence_max_slider_axes,
-            "prom. max",
-            valmin=self.prominence_min,
-            valmax=slider_limit_defaults["prominence_upper"] if slider_limit_defaults.get("prominence_upper") is not None else 1,
-            valinit=self.prominence_max
-            )
-        self.prominence_max_slider.on_changed(self.prominence_max_function)
+        self.max_prom_key = self.create_slider(
+            ax_dim=[0.25, 0.03, 0.65, 0.03],
+            label="prom. max",
+            vmin=self.prominence_min,
+            vmax=estimate_prominence(self.ydata),
+            vinit=self.prominence_max,
+            func=self.prominence_max_function
+        )
+
         ## END prominence_slider
         ## BEGIN print_button
         self.print_button_axes = plt.axes([0.025, 0.13, 0.1, 0.04])
@@ -235,8 +241,8 @@ class PeakFitGUI:
             "height": (self.height_min, self.height_max),
             "distance": self.peak_distance,
             "prominence": (
-                None if self.prominence_min <= 0 else self.prominence_min,
-                None if self.prominence_max == self.prominence_min_slider.valmax else self.prominence_max
+                self.prominence_min,
+                self.prominence_max
                 ),
             "width": (0, 20),
         }
@@ -293,27 +299,36 @@ class PeakFitGUI:
             ylim_lower - delta/10,
             ylim_upper + delta/10
         )
+    
+    def create_slider(self, ax_dim:list, label:str, vmin:float, vmax:float, vinit:float, func:callable) -> Slider:
+        axes = self.fig.add_axes(ax_dim)
+        slider = Slider(
+            axes,
+            label=label,
+            valmin=vmin,
+            valmax=vmax,
+            valinit=vinit
+        )
+        slider.on_changed(func)
+        self.widgets.setdefault("slider", {}).update({label: slider})
+        return label
+
+    def create_range_slider(self, ax_dim:list, label:str, vmin:float, vmax:float, func:callable) -> RangeSlider:
+        slider = None
+        self.widgets.setdefault("rangeslider", {}).update({label: slider})
+
+
 
     def reset_slider_axes(self):
         """Resets the axes of all sliders based on the current slider upper and lower limits
         """
-        self.height_min_slider_axes.set_xlim(
-            self.height_min_slider.valmin,
-            self.height_min_slider.valmax
+        for key, slider in self.widgets["slider"].items():
+            slider.ax.set_xlim(
+                slider.valmin,
+                slider.valmax
             )
-        self.height_max_slider_axes.set_xlim(
-            self.height_max_slider.valmin,
-            self.height_max_slider.valmax
-            )
-
-        self.prominence_min_slider_axes.set_xlim(
-            self.prominence_min_slider.valmin,
-            self.prominence_min_slider.valmax
-        )
-        self.prominence_max_slider_axes.set_xlim(
-            self.prominence_max_slider.valmin,
-            self.prominence_max_slider.valmax
-        )
+        return self
+        
 
     def radio_idx_function(self, label:str):
         """Evenet function for interaction with radio_idx widget. Restes 'self.idx' to radio selection and changes axes limits and
@@ -345,16 +360,33 @@ class PeakFitGUI:
         """
         self.idy = self.df.columns.get_loc(label)
         # reset height slider bounds
-        self.height_max_slider.valmax = self.ydata.max()
-        self.height_min_slider.valmin = self.ydata.min()
-        self.reset_slider_axes()
         # update line data
         self.line.set_ydata(self.ydata)
         # update y axis
         self.ax.set_ylim(self.ylim)
         self.ax.set_ylabel(label)
         self.update_peak_scatter()
+        # update height sliders
+        self.update_height_sliders()
         plt.draw()
+
+
+    def update_height_sliders(self):
+        # get new data limits
+        self.height_max = self.ydata.max()
+        self.height_min = self.ydata.min()
+        # adjust max height slider
+        self.widgets["slider"][self.max_height_key].set_val(self.height_max) 
+        self.widgets["slider"][self.max_height_key].valmax = self.height_max
+        self.widgets["slider"][self.max_height_key].valmin = self.height_min 
+        # adjust min height slider
+        self.widgets["slider"][self.min_height_key].set_val(self.height_min)
+        self.widgets["slider"][self.min_height_key].valmax = self.height_max
+        self.widgets["slider"][self.min_height_key].valmin = self.height_min
+        self.reset_slider_axes()
+        return self
+
+
 
     def height_min_function(self, event:str):
         """Event function for height min slider. Reads slider value, resets maximum slider minimum to slider value, updates slider axes
@@ -365,8 +397,8 @@ class PeakFitGUI:
         event : str
             slider event
         """
-        self.height_min = self.height_min_slider.val
-        self.height_max_slider.valmin = self.height_min
+        self.height_min = self.widgets["slider"][self.min_height_key].val
+        self.widgets["slider"][self.max_height_key].valmin = self.height_min
         self.reset_slider_axes()
         self.update_peak_scatter()
         # reset horizontal line
@@ -389,8 +421,8 @@ class PeakFitGUI:
         event : str
             slider event
         """
-        self.height_max = self.height_max_slider.val
-        self.height_min_slider.valmax = self.height_max
+        self.height_max = self.widgets["slider"][self.max_height_key].val
+        self.widgets["slider"][self.min_height_key].valmax = self.height_max
         self.reset_slider_axes()
         self.update_peak_scatter()
         # reset horizontal line
@@ -412,7 +444,7 @@ class PeakFitGUI:
         event : _type_
             slider event
         """
-        self.peak_distance = self.peak_distance_slider.val
+        self.peak_distance = self.widgets["slider"][self.peak_dist_key].val
         self.update_peak_scatter()
         plt.draw()
 
@@ -424,8 +456,8 @@ class PeakFitGUI:
         event : _type_
             slider event
         """
-        self.prominence_min = self.prominence_min_slider.val
-        self.prominence_max_slider.valmin = self.prominence_min
+        self.prominence_min = self.widgets["slider"][self.min_prom_key].val
+        self.widgets["slider"][self.max_prom_key].valmin = self.prominence_min
         self.reset_slider_axes()
         self.update_peak_scatter()
         plt.draw()
@@ -438,8 +470,8 @@ class PeakFitGUI:
         event : _type_
             slider event
         """
-        self.prominence_max = self.prominence_max_slider.val
-        self.prominence_min_slider.valmax = self.prominence_max
+        self.prominence_max = self.widgets["slider"][self.max_prom_key].val
+        self.widgets["slider"][self.min_prom_key].valmax = self.prominence_max
         self.reset_slider_axes()
         self.update_peak_scatter()
         plt.draw()
@@ -481,11 +513,8 @@ class PeakFitGUI:
         event : _type_
             button event
         """
-        self.height_min_slider.reset()
-        self.height_max_slider.reset()
-        self.peak_distance_slider.reset()
-        self.prominence_min_slider.reset()
-        self.prominence_max_slider.reset()
+        for key, slider in self.widgets["slider"].items():
+            slider.reset()
 
     def switch_grid(self, event):
         self.grid_visible = ~self.grid_visible
@@ -606,6 +635,7 @@ if __name__ == "__main__":
 
     # create command line parser
     import argparse
+    import sys
     parser = argparse.ArgumentParser(
         prog = "python peak_fit_gui.py",
         description=(
@@ -646,6 +676,8 @@ if __name__ == "__main__":
     if cl_args.file is None:
         from tkinter.filedialog import askopenfilename
         file = Path(askopenfilename())
+        if file is None:
+            sys.exit()
     else:
         file = cl_args.file
     # check if file exists
