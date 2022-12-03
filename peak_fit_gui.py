@@ -88,7 +88,6 @@ class PeakFitGUI:
         self.idx = config.get("data_defaults", {}).get("x_initial_cidx", 1)
         self.idy = config.get("data_defaults", {}).get("y_initial_cidx", 1)
         #<<<<< setup figure >>>>>
-        # initialize matplotlib figure and axes
         self.fig, self.ax = plt.subplots(**config.get("figure_settings", {}))
         self.setup_figure(
             title=plot_title,
@@ -97,9 +96,15 @@ class PeakFitGUI:
             plot_settings=config.get("plot_settings", {})
         )
         #>>>>> setup figure <<<<<
+        #<<<<< read initial peak fit values >>>>>
+        self.prominence = config.get("peak_fit_defaults", {}).get("prominence", (0, estimate_prominence(self.ydata)))
+        self.height = config.get("peak_fit_defaults", {}).get("height", (self.ydata.min(), self.ydata.max()))
+        self.width = config.get("peak_fit_defaults", {}).get("width", (0, self.xdata.size))
+        self.peak_distance = config.get("peak_fit_defaults", {}).get("distance",1)
+        #>>>>> read initial peak fit values <<<<<
         # dictionary to store widgets 
         self.widgets = dict()
-        #<<<<< slider creation >>>>>
+        #<<<<< setup radio buttons >>>>>
         idx_radio_axes = self.fig.add_axes(
             [0.02, 0.46 - 0.03*self.ncols, 0.15, 0.03*self.ncols], aspect="equal"#, facecolor=(0.6,0.6,0.6)
             )
@@ -123,10 +128,8 @@ class PeakFitGUI:
             )
         idy_radio.on_clicked(self.radio_idy_function)
         self.widgets.setdefault("radio_btn", {}).update({"idy": idy_radio})
-
-        self.height = config.get("peak_fit_defaults", {}).get("height", (self.ydata.min(), self.ydata.max()))
-        self.width = config.get("peak_fit_defaults", {}).get("width", (0, self.xdata.size))
-
+        #>>>>> setup radio buttons <<<<<
+        #<<<<< slider creation >>>>>
         self.width_key = self.create_slider(
             ax_dim=[self.slider_x0, self.slider_y0, self.slider_width, self.slider_height],
             label="width",
@@ -140,7 +143,6 @@ class PeakFitGUI:
             handle_style=config.get("slider_settings", {}).get("handle_style", None),
         )
 
-        self.prominence = config.get("peak_fit_defaults", {}).get("prominence", (0, estimate_prominence(self.ydata)))
         self.prominence_key = self.create_slider(
             ax_dim=[
                 self.slider_x0,
@@ -175,7 +177,6 @@ class PeakFitGUI:
             handle_style=config.get("slider_settings", {}).get("handle_style", None),
         )
 
-        self.peak_distance = config.get("peak_fit_defaults", {}).get("distance",1)
         self.peak_dist_key = self.create_slider(
                 ax_dim=[
                 self.slider_x0,
