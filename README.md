@@ -52,7 +52,7 @@ options:
   -h, --help            show this help message and exit
   -f FILE, --file FILE  Path to data file. If not supply file can be chosen via a tkinter file dialog
   -c CONFIG, --config CONFIG
-                        Path to conifg file. Defaults to '/home/moritz/GitRepos/peak-fit-gui/settings.cfg'
+                        Path to conifg file. Defaults to './settings.cfg'
 
 Requirements:
         python >= 3.11
