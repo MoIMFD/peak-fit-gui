@@ -97,7 +97,7 @@ class MatplotlibGUI:
         self.height_slider = RangeSlider(
             self.figure.add_axes(
                 [
-                    self.axes.get_position().x1,
+                    self.axes.get_position().x1 + 0.03,
                     self.axes.get_position().y0,
                     0.05 * 9 / 16,
                     self.axes.get_position().height,
@@ -108,7 +108,6 @@ class MatplotlibGUI:
             valmin=self.axes.get_ylim()[0],
             valmax=self.axes.get_ylim()[1],
             valinit=(min(self.line.get_ydata()), max(self.line.get_ydata())),
-            valfmt="",
         )
         self.height_slider.on_changed(self.height_slider_function)
         self.hline_upper = self.axes.axhline(
@@ -158,9 +157,8 @@ class MatplotlibGUI:
             "prominence",
             orientation="horizontal",
             valmin=0,
-            valmax=self.xdata.size + 1,
-            valinit=(0, self.xdata.size + 1),
-            valstep=int(1),
+            valmax=abs(self.ydata.max() - self.ydata.min()),
+            valinit=(0, abs(self.ydata.max() - self.ydata.min())),
         )
         self.prominence_slider.on_changed(self.prominence_slider_function)
         ###################################
@@ -276,13 +274,18 @@ class MatplotlibGUI:
 
     @redraw
     def width_slider_function(self, event):
-        if event[0] == 0:
+        if event[0] == self.width_slider.valmin:
             event = (None, event[1])
-        if event[1] > self.xdata.size:
+        if event[1] > self.width_slider.valmax:
             event = (event[0], None)
         self.find_peaks_wrapper.update_param("width", event)
         self.set_scatter()
 
     @redraw
     def prominence_slider_function(self, event):
-        pass
+        if event[0] == self.prominence_slider.valmin:
+            event = (None, event[1])
+        if event[1] == self.prominence_slider.valmax:
+            event = (event[0], None)
+        self.find_peaks_wrapper.update_param("prominence", event)
+        self.set_scatter()
