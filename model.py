@@ -58,3 +58,6 @@ class FindPeaksWrapper:
 
     def get_neg_peaks(self, data: np.ndarray) -> tuple[np.ndarray, dict]:
         return find_peaks(-data, **self.params_height_reversed)
+
+    def print_peaks(self):
+        pass

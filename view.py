@@ -3,7 +3,7 @@ import argparse
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from matplotlib.widgets import RadioButtons, RangeSlider, Slider
+from matplotlib.widgets import RadioButtons, RangeSlider, Slider, Button
 from matplotlib.patches import Polygon
 
 
@@ -47,6 +47,7 @@ class MatplotlibGUI:
         self.figure, self.axes = plt.subplots(figsize=(16, 9))
         self.figure.subplots_adjust(left=0.3, bottom=0.25)
         self.figure.suptitle(self.gui_title, fontsize=16)
+        self.grid_flag = False
         ###########################
         ## setup x radio buttons ##
         ###########################
@@ -194,15 +195,33 @@ class MatplotlibGUI:
             self.ydata[self.find_peaks_wrapper.get_neg_peaks(self.ydata)[0]],
             **self.neg_scatter_plot_params
         )
+        #########################
+        ## create print button ##
+        #########################
+        print_button = Button(
+            self.figure.add_axes([0.025, 0.14, 0.1, 0.04]),
+            "Print",
+            hovercolor="0.975",
+        )
+        print_button.on_clicked(self.print_btn_function)
+        ########################
+        ## create grid button ##
+        ########################
+        grid_button = Button(
+            self.figure.add_axes([0.025, 0.02, 0.1, 0.04]),
+            "Grid",
+            hovercolor="0.975",
+        )
+        grid_button.on_clicked(self.grid_btn_function)
 
         plt.show()
 
     @property
-    def xdata(self) -> pd.Series:
+    def xdata(self):
         return self.df.iloc[:, self.x_index].values
 
     @property
-    def ydata(self) -> pd.Series:
+    def ydata(self):
         return self.df.iloc[:, self.y_index].values
 
     @property
@@ -289,3 +308,11 @@ class MatplotlibGUI:
             event = (event[0], None)
         self.find_peaks_wrapper.update_param("prominence", event)
         self.set_scatter()
+
+    @redraw
+    def grid_btn_function(self, event):
+        self.grid_flag = not self.grid_flag
+        self.axes.grid(self.grid_flag)
+
+    def print_btn_function(self, event):
+        self.find_peaks_wrapper.print_peaks()
