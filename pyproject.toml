@@ -2,7 +2,7 @@
 name = "peak-fit-gui"
 version = "2.1.0"
 description = ""
-authors = ["Robert Hardege <Robert.Hardege@imfd.tu-freiberg.de>"]
+authors = ["Moritz Kluwe <Moritz-Niklas.Kluwe@imfd.tu-freiberg.de>"]
 readme = "README.md"
 packages = [{include = "peak_fit_gui"}]
 
