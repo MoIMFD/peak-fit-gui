@@ -20,21 +20,21 @@ or
 conda activate <new_name>
 ```
 if you changed the `name` attribute in the `environment.yml` file.
-### Lunching the Application
+### Launching the Application
 The application is lunched by
 ```bash
-python peak_fit_gui.py
+python -m peak_fit_gui
 ```
 If no arguments are supplied the application will open a file dialog where the `.csv` file containing the data to process can be chosen interactively. Alteratively the data file path can be supplied via the command line using the `--file` option followed by the file path. By default a configuration file named `settings.cfg` is expected to be located in the same folder as the `peak_fit_gui.py` script. You can specify an other configuration file by specifying the configuration file path when calling the script.
 ```bash
-python peak_fit_gui.py --file <path-to-data-file> --config <path-to-config-file>
+python -m peak_fit_gui --file <path-to-data-file> --config <path-to-config-file>
 ```
 With the `--help` option some useful information are displayed.
 ```bash
-python peak_fit_gui.py --help
+python -m peak_fit_gui --help
 ```
 ```bash
-usage: python peak_fit_gui.py [-h] [-f FILE] [-c CONFIG]
+usage: python -m peak_fit_gui [-h] [-f FILE] [-c CONFIG]
 
     The 'scipy.signal.find_peaks' function is a very handy utility for finding peaks in signals or other kinds of data.
     However the method is very sensible concerning its parameters. Since a manuel parameter tuning can be very frustrating I wrote 

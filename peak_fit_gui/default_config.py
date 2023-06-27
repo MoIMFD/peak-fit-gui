@@ -1,3 +1,4 @@
+default_config = """
 # arguments passed to pd.read_csv
 # see https://pandas.pydata.org/docs/reference/api/pandas.read_csv.html
 [pandas_args]
@@ -89,3 +90,4 @@ alpha = 0.5
 [axhspan_settings]
 color = [0.6, 0.4, 0.4]
 alpha = 0.2
+"""
