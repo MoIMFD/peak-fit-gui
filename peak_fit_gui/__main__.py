@@ -8,9 +8,9 @@ else:
     import tomli as tomllib
 
 from pathlib import Path
-from functools import lru_cache
+from .default_config import default_config
 
-
+import os
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -19,13 +19,13 @@ from matplotlib.widgets import Button, RadioButtons, Slider, RangeSlider
 from scipy.signal import find_peaks
 
 #<<<<< GLOBALS >>>>>
-SCRIPT_VERSION:str = "2.0"  # current version of the script, update this if you make significant modifications
+SCRIPT_VERSION:str = "2.1.0"  # current version of the script, update this if you make significant modifications
 
 AUTHOR:str = "Moritz Kluwe"  # original script author
 CREATED_AT:str = "16.11.2022"  # date of script creation
 
-MODIFIED_BY:str = ["Moritz Kluwe"]  # list of people how contribute major modifications; change SCRIPT_VERSION variable
-MODIFIED_AT:str = ["03.12.2022"]  # dates at which major modifications have taken place
+MODIFIED_BY:str = ["Moritz Kluwe, Robert Hardege"]  # list of people how contribute major modifications; change SCRIPT_VERSION variable
+MODIFIED_AT:str = ["30.05.2023"]  # dates at which major modifications have taken place
 
 CONSOLE_OUTPUT_PADDING:int = 14  # padding for column wise output of the 'print' button
 #<<<<< GLOBALS >>>>>
@@ -707,7 +707,7 @@ if __name__ == "__main__":
     import argparse
     import sys
     parser = argparse.ArgumentParser(
-        prog = "python peak_fit_gui.py",
+        prog = "python -m peak_fit_gui",
         description=(
         """
     The 'scipy.signal.find_peaks' function is a very handy utility for finding peaks in signals or other kinds of numeric series.
@@ -735,14 +735,24 @@ if __name__ == "__main__":
         "-c", 
         "--config", 
         type=Path, 
-        default=Path(application_directory, "./settings.cfg"),
+        default=None,
         help=f"Path to conifg file. Defaults to '{str(Path(application_directory, './settings.cfg'))}'",
         )
     # parse command line arguments
     cl_args = parser.parse_args()
     # loading config file
-    with open(cl_args.config, mode="rb") as conf_file:
-        config = tomllib.load(conf_file)
+    if not cl_args.config is None:
+        if os.path.exists(cl_args.config):
+            with open(cl_args.config, mode="rb") as conf_file:
+                config = tomllib.load(conf_file)
+        else:
+            with open(cl_args.config, mode="w") as conf_file:
+                conf_file.write(default_config)
+            print(f"Config file does not exist. Default config written to '{cl_args.config}'. Exiting Modul!")
+            sys.exit()
+    else:
+        config = tomllib.loads(default_config)
+
     # if no file is supplied via the command line interface open a tkinter file dialog
     if cl_args.file is None:
         from tkinter.filedialog import askopenfilename
